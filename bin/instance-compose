@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# instance-compose - wrapper around moodle-docker-compose for named instances.
+#
+# Usage:
+#   bin/instance-compose <instance> <docker-compose-args...>
+#
+# Examples:
+#   bin/instance-compose main up -d
+#   bin/instance-compose v501 up -d
+#   bin/instance-compose v500 up -d
+#   bin/instance-compose v501 exec webserver php admin/cli/install_database.php \
+#     --agree-license --adminpass="test" --adminemail="admin@example.com" \
+#     --fullname="Moodle 5.1" --shortname="moodle501"
+#   bin/instance-compose main down
+#
+# Available instances (env files in instances/*.env):
+#   main  → Moodle 5.2dev  → http://localhost:8000
+#   v501  → Moodle 5.1     → http://localhost:8051
+#   v500  → Moodle 5.0     → http://localhost:8050
+
+set -e
+
+thisfile=$( readlink "${BASH_SOURCE[0]}" ) || thisfile="${BASH_SOURCE[0]}"
+basedir="$( cd "$( dirname "$thisfile" )/../" && pwd -P )"
+
+INSTANCE="$1"
+if [ -z "$INSTANCE" ]; then
+    echo "Usage: bin/instance-compose <instance> [docker-compose args...]"
+    echo ""
+    echo "Available instances:"
+    for f in "${basedir}/instances/"*.env; do
+        name="$(basename "$f" .env)"
+        url=$(grep 'URL:' "$f" | sed 's/.*URL: //')
+        echo "  ${name}  ${url}"
+    done
+    exit 1
+fi
+
+ENVFILE="${basedir}/instances/${INSTANCE}.env"
+if [ ! -f "$ENVFILE" ]; then
+    echo "Error: No env file found for instance '${INSTANCE}' (looked for ${ENVFILE})"
+    exit 1
+fi
+
+# Source instance env vars, then forward remaining args to moodle-docker-compose.
+source "$ENVFILE"
+shift  # remove the instance name from args
+
+exec "${basedir}/bin/moodle-docker-compose" "$@"
+

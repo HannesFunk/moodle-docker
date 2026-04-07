@@ -23,3 +23,15 @@ services:
     image: "selenium/standalone-firefox${MOODLE_DOCKER_SELENIUM_SUFFIX:-}:${MOODLE_DOCKER_BROWSER_TAG}"
     volumes:
       - "${MOODLE_DOCKER_WWWROOT}:/var/www/html:ro"
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    ports:
+      - "${MOODLE_DOCKER_PMA_PORT:-8081}:80"
+    environment:
+      PMA_HOST: db
+      PMA_USER: moodle
+      PMA_PASSWORD: "m@0dl3ing"
+      PMA_PORT: 3306
+    depends_on:
+      - db
